@@ -8,10 +8,6 @@
 
 import UIKit
 
-let KScreenWidth = UIScreen.main().bounds.size.width
-let KScreenHeight = UIScreen.main().bounds.size.height
-let KDomain = "http://tbapi.ixiaochuan.cn/"
-
 let KFrameHeight = UIScreen.main().bounds.size.height - 64
 
 class HomeViewController: BaseViewController , UIScrollViewDelegate {

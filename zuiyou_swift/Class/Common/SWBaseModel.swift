@@ -37,27 +37,35 @@ class SWBaseModel: NSObject {
         var attrMapDic: NSDictionary = NSDictionary()
         if attrMapDic.allKeys.count <= 0 {
             let dic = NSMutableDictionary()
-            for var key in dataDic {
-                let value = "\(key)"
-                dic.setValue(value, forKey: value)
+            for key in dataDic.allKeys {
+                let value = dataDic["\(key)"]
+                dic.setValue(value, forKey: key as! String)
                 attrMapDic = dic
             }
         }
         let keyEnum = attrMapDic.keyEnumerator()
-        let attributeName: AnyObject
-        attributeName = keyEnum.nextObject()!
-        while attributeName.count > 0 {
+//        print(keyEnum.allObjects)
+        var attributeName: AnyObject?
+        let obj = keyEnum.nextObject()
+        if  obj != nil{
+            attributeName = obj
+        }
+        while (attributeName != nil) {
             let sel = self.getSetterSelWithAttibuteName(attributeName: attributeName as! String)
             if self.responds(to: sel) {
-                let dataDicKey = attrMapDic.object(forKey: attributeName)
+                let dataDicKey = attrMapDic.object(forKey: attributeName!)
                 let attributeValue = dataDic.object(forKey: dataDicKey!)
                 self.performSelector(onMainThread: sel, with: attributeValue, waitUntilDone: Thread.isMainThread)
             }
+            let nextObj = keyEnum.nextObject()
+            if nextObj == nil{
+                break
+            }
+            attributeName = nextObj
         }
         
         
     }
-    
     
     func initWithCoder(decoder: NSCoder) -> AnyObject {
         let attrMapDic = NSDictionary()

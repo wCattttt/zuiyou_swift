@@ -7,3 +7,10 @@
 
 #import "PrefixHeader.pch"
 #import "BaseModel.h"
+
+#import "NewModel.h"
+#import "ListModel.h"
+#import "MemberModel.h"
+#import "TopicModel.h"
+#import "ReviewModel.h"
+#import "ImgModel.h"

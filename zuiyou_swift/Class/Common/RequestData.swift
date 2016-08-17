@@ -10,7 +10,7 @@ import UIKit
 import AFNetworking
 
 typealias Succeed = (URLSessionDataTask?,AnyObject?)->Void
-typealias Failure = (URLSessionDataTask?,Data?)->Void
+typealias Failure = (URLSessionDataTask?,NSError?)->Void
 
 class RequestData: NSObject {
 //    func requestGet(url: String, params: NSDictionary, reqComplete: (data: NSData)-> () ) {
@@ -36,7 +36,7 @@ class RequestData: NSObject {
             let data: Data = (error?.userInfo["com.alamofire.serialization.response.error.data"])! as! Data
             let text: String = String(data: data, encoding: String.Encoding.utf8)!
             if(!text.isEmpty){
-                myfailure(task, data)
+                myfailure(task, error)
             }
             
         }
@@ -56,16 +56,95 @@ class RequestData: NSObject {
             mysucceed(task, responseObject)
         }) { (task: URLSessionDataTask?, error: NSError) in
             let data: Data = (error.userInfo["com.alamofire.serialization.response.error.data"])! as! Data
-            myfailure(task, data)
+            myfailure(task, error)
         }
     }
     
-    class func convertStringToDictionary(text: String) -> [String:AnyObject]? {
-        if let data = text.data(using: String.Encoding.utf8) {
-            do {
-                return try JSONSerialization.jsonObject(with: data, options: []) as? [String:AnyObject]
-            } catch let error as NSError {
-                print(error)
+    // 带请求体body 的请求 使用NSURLSession封装
+    class func postBody(urlString: String, parameter: NSDictionary?, succeed:Succeed,failed:Failure) {
+        let request = NSMutableURLRequest(url: URL(string: urlString)!)
+        request.httpMethod = "POST"
+        
+        var dataStr = String()
+        var count = 1
+        if parameter != nil{
+            for key in (parameter?.allKeys)! {
+                let param = parameter?[key as! String] as! String    // "\(key)" + "\(parameter["\(key)"])"
+                let parStr: String
+                if count == parameter?.allKeys.count {
+                    parStr =  "\"\(key)\"" + ":" + "\"\(param)\""
+                }else {
+                    parStr =  "\"\(key)\"" + ":" + "\"\(param)\","
+                }
+                dataStr = dataStr.appending(parStr)
+                count += 1
+            }
+            dataStr = "{" + dataStr + "}"
+            request.httpBody = dataStr.data(using: String.Encoding.utf8)
+        }
+        
+        let mysucceed:Succeed = succeed
+        let myfailure:Failure = failed
+        
+        let urlSession = URLSession.shared
+        let task: URLSessionDataTask = urlSession.dataTask(with: request as URLRequest) { (data, response, error) in
+            if error == nil {
+                mysucceed(nil, data)
+            } else {
+                myfailure(nil, error)
+            }
+        }
+        
+        task.resume()
+        
+//        let dataTask: URLSessionDataTask = urlSession.dataTask(with: request) { (data: Data?, response: URLResponse?, error: NSError?) in
+//            let dataStr = String(data)
+//        }
+//        
+//        dataTask.resume
+        
+        
+        /*
+         NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:@"http://tbapi.ixiaochuan.cn/index/recommend?sign=23ff067443feeca74d5fc7e259ab8697"]];
+         [request setHTTPMethod:@"POST"];
+         
+         NSDictionary *params = @{
+         @"h_did":@"598ff586c219a681793fb965c4775fa05eaedea2",
+         @"token":@"57ad4b49277f28160b6cabfa"
+         };
+         //
+         NSString *body = @"{\"h_did\":\"598ff586c219a681793fb965c4775fa05eaedea2\",\"token\":\"57ad4b49277f28160b6cabfa\"}";
+         //    NSData *data = [self returnDataWithDictionary:params];
+         NSData *data = [body dataUsingEncoding:NSUTF8StringEncoding];
+         //
+         [request setHTTPBody:data];
+         
+         NSURLSession *session = [NSURLSession sharedSession];
+         NSURLSessionDataTask *dataTask = [session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
+         NSLog(@"====%@", response);
+         NSString *datastr = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+         NSLog(@"%@", datastr);
+         }];
+         
+         [dataTask resume];
+         */
+        
+    }
+    
+    
+    class func convertStringToDictionary(text: String?) -> [String:AnyObject]? {
+//        let index = text.index(text.startIndex, offsetBy: 8)
+//        let begStr = text.substring(to: index)
+//        if begStr == "Optional" {
+//            
+//        }
+        if text != nil {
+            if let data = text?.data(using: String.Encoding.utf8) {
+                do {
+                    return try JSONSerialization.jsonObject(with: data, options: []) as? [String:AnyObject]
+                } catch let error as NSError {
+                    print(error)
+                }
             }
         }
         return nil

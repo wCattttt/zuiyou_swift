@@ -7,25 +7,41 @@
 //
 
 import UIKit
+import MBProgressHUD
 
 class NewViewController: BaseViewController , UITableViewDataSource, UITableViewDelegate{
 
     var newData = NSMutableArray()
-    
+    let identifier = "NewTableViewCell"
+    var tableView = UITableView(frame: CGRect.zero, style: UITableViewStyle.plain)
+    let refreshControl =  UIRefreshControl()
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        reloadDataSource()
-
+        let frame = CGRect(x: 0, y: 0, width: KScreenWidth, height: KScreenHeight - 64 - 49)
+        tableView.frame = frame
         self.view.backgroundColor = UIColor.red()
-        
-        let tableView = UITableView.init(frame: self.view.frame, style: UITableViewStyle.plain)
         tableView.delegate = self
         tableView.dataSource = self
-        
+        tableView.register(NewTableViewCell.classForCoder(), forCellReuseIdentifier: identifier)
         self.view.addSubview(tableView)
         
+        reloadDataSource()
+        
+        refreshControl.tintColor = blueColor
+        refreshControl.attributedTitle = AttributedString(string: "→_→。。")
+        refreshControl.addTarget(self, action: #selector(refreshAction), for: UIControlEvents.valueChanged)
+        if #available(iOS 10.0, *) {
+            tableView.refreshControl = refreshControl
+        } else {
+            // Fallback on earlier versions
+        }
+        
+    }
+    
+    func refreshAction() {
+        refreshControl.beginRefreshing()
+        reloadDataSource()
     }
     
     func reloadDataSource() {
@@ -33,13 +49,23 @@ class NewViewController: BaseViewController , UITableViewDataSource, UITableView
         let postUrl = KDomain + "index/recommend?sign=23ff067443feeca74d5fc7e259ab8697"
         
         let parameter = ["h_did": "598ff586c219a681793fb965c4775fa05eaedea2", "token": "57ad4b49277f28160b6cabfa"]
-        RequestData.POST(url: postUrl, parameter: parameter, succeed: { (task: URLSessionDataTask?, responseObject: AnyObject?) in
-            print("成功")
-        }) { (task: URLSessionDataTask?, data: Data?) in
-            print("失败")
-            let text: String = String(data: data!, encoding: String.Encoding.utf8)!
-            let dic = RequestData.convertStringToDictionary(text: text)
-            print(dic)
+        
+        let hudView = MBProgressHUD.showAdded(to: self.view, animated: true)
+        hudView.label.text = "加载中..."
+        RequestData.postBody(urlString: postUrl, parameter: parameter, succeed: { (dataTask, data) in
+            hudView.removeFromSuperview()
+            self.refreshControl.endRefreshing()
+            let dataStr = NSString(data: data as! Data, encoding: String.Encoding.utf8.rawValue)
+            if dataStr != nil {
+                let dataDic = RequestData.convertStringToDictionary(text: dataStr as? String)
+                let newModel = NewModel(dataDic: dataDic)
+                
+                self.newData = newModel?.data["list"] as! NSMutableArray
+                self.tableView.reloadData()
+            }
+            
+        }) { (dataTask, error) in
+           print(error)
         }
     }
     
@@ -47,9 +73,17 @@ class NewViewController: BaseViewController , UITableViewDataSource, UITableView
         return newData.count
     }
     
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 300
+    }
+    
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = UITableViewCell.init(style: UITableViewCellStyle.default, reuseIdentifier: "test")
-        cell.textLabel?.text = "ffffff"
+        
+        let cell = tableView.dequeueReusableCell(withIdentifier: identifier) as! NewTableViewCell
+        
+        let listModel: ListModel = newData[indexPath.row] as! ListModel
+        cell.setListModel(listModel: listModel)
+        
         return cell
     }
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
